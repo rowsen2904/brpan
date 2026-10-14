@@ -42,8 +42,18 @@ let ipv6Cache: boolean | null = null;
 
 function hasIpv6(): boolean {
     if (ipv6Cache !== null) return ipv6Cache;
+    if (process.env.FORCE_IPV6 === 'true') return (ipv6Cache = true);
+    if (process.env.FORCE_IPV6 === 'false') return (ipv6Cache = false);
     try {
-        ipv6Cache = fs.readFileSync('/proc/net/if_inet6', 'utf8').trim().length > 0;
+        // Only a real global-scope address (scope 00) counts — every interface has a
+        // link-local fe80:: (scope 20), so "file is non-empty" is not enough.
+        ipv6Cache = fs
+            .readFileSync('/proc/net/if_inet6', 'utf8')
+            .split('\n')
+            .some((line) => {
+                const parts = line.trim().split(/\s+/);
+                return parts.length >= 6 && parts[3] === '00' && parts[5] !== 'lo';
+            });
     } catch {
         ipv6Cache = false;
     }
