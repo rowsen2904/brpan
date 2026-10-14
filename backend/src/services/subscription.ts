@@ -252,6 +252,7 @@ export function publicInfo(user: UserRow) {
         expireAt: user.expire_at,
         deviceLimit: user.device_limit,
         profileTitle: s.subscription.profileTitle,
+        country: s.country,
         supportUrl: s.subscription.supportUrl,
         announce: s.subscription.announce,
         ...info,

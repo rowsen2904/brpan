@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { Copy } from '@/components/common';
 import { api, notifyOk } from '@/lib/api';
 import { date } from '@/lib/format';
-import { COUNTRIES } from '@/lib/countries';
+import { AUTO_COUNTRY, COUNTRIES } from '@/lib/countries';
 import type { Settings } from '@/lib/types';
 
 type General = Pick<Settings, 'domain' | 'serverAddress' | 'remarkPrefix' | 'country' | 'subscription' | 'limits' | 'logging'>;
@@ -46,7 +46,15 @@ function GeneralForm({ settings }: { settings: Settings }) {
                         <TextInput label="Domain" description="Panel, subscriptions, TLS for XHTTP/Trojan/Hysteria2" placeholder="vpn.example.com" {...form.getInputProps('domain')} />
                         <TextInput label="Server address in keys" description="Domain or IP clients connect to" {...form.getInputProps('serverAddress')} />
                         <TextInput label="Remark prefix" description="Shown before protocol name in clients" {...form.getInputProps('remarkPrefix')} />
-                        <Select label="Country flag" description="Flag shown before server names in clients" searchable data={COUNTRIES} {...form.getInputProps('country')} />
+                        <Select
+                            label="Country flag"
+                            description="Shown before server names in clients. Auto = detected from the server IP."
+                            searchable
+                            allowDeselect={false}
+                            data={COUNTRIES}
+                            value={form.values.country || AUTO_COUNTRY}
+                            onChange={(v) => form.setFieldValue('country', !v || v === AUTO_COUNTRY ? '' : v)}
+                        />
                     </SimpleGrid>
                     <Text size="xs" c="dimmed" mt="sm">
                         Public base URL: {settings.publicBaseUrl}

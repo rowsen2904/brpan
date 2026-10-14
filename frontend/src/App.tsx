@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/Dashboard';
 import { LoginPage } from './pages/Login';
 import { ProtocolsPage } from './pages/Protocols';
 import { SettingsPage } from './pages/Settings';
+import { SquadsPage } from './pages/Squads';
 import { SubscriptionPage } from './pages/Subscription';
 import { SystemPage } from './pages/System';
 import { UsersPage } from './pages/Users';
@@ -28,6 +29,7 @@ export function App() {
             >
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/users" element={<UsersPage />} />
+                <Route path="/squads" element={<SquadsPage />} />
                 <Route path="/protocols" element={<ProtocolsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/system" element={<SystemPage />} />

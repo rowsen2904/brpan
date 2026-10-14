@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { StatCard } from '@/components/common';
 import { api } from '@/lib/api';
+import { countryFlag, countryName } from '@/lib/countries';
 import { bytes, duration, rate } from '@/lib/format';
 import { PROTOCOL_META, type Protocol, type UsagePoint } from '@/lib/types';
 
@@ -16,6 +17,7 @@ interface Core {
 }
 
 interface Dashboard {
+    country: string;
     users: {
         total: number;
         active: number;
@@ -179,7 +181,12 @@ export function DashboardPage() {
                 <Grid.Col span={{ base: 12, md: 6, lg: 4 }}>
                     <Paper withBorder p="md" className="glass" h="100%">
                         <Text fw={600} mb="md">
-                            Server · {system.hostname}
+                            {countryFlag(data.country)} Server · {system.hostname}
+                            {data.country && data.country !== 'XX' && (
+                                <Text span size="xs" c="dimmed" ml={6}>
+                                    {countryName(data.country)}
+                                </Text>
+                            )}
                         </Text>
                         <Stack gap="sm">
                             <Meter label={`CPU · ${system.cpus} cores`} value={system.cpuUsage} total={1} text={`${(system.cpuUsage * 100).toFixed(1)}% · load ${system.load.map((l) => l.toFixed(2)).join(' ')}`} />

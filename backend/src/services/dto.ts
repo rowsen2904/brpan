@@ -4,7 +4,7 @@ import { getSettings } from './settings.js';
 import { subscriptionUrl } from './subscription.js';
 import { parseProtocols } from './users.js';
 
-export function userDto(u: UserRow) {
+export function userDto(u: UserRow, squadIds: number[] = []) {
     const s = getSettings();
     return {
         id: u.id,
@@ -13,6 +13,7 @@ export function userDto(u: UserRow) {
         shortId: u.short_id,
         status: u.status,
         protocols: parseProtocols(u),
+        squadIds,
         trafficLimit: u.traffic_limit,
         trafficUsed: u.traffic_used,
         lifetimeUsed: u.lifetime_used,

@@ -8,6 +8,7 @@ import { useParams } from 'react-router-dom';
 
 import { LinkRow } from '@/components/common';
 import { Logo } from '@/components/Logo';
+import { countryFlag } from '@/lib/countries';
 import { bytes, date, daysLeft } from '@/lib/format';
 import type { SubscriptionInfo } from '@/lib/types';
 
@@ -21,6 +22,7 @@ interface PublicInfo extends SubscriptionInfo {
     expireAt: number | null;
     deviceLimit: number;
     profileTitle: string;
+    country: string;
     supportUrl: string;
     announce: string;
 }
@@ -220,7 +222,7 @@ export function SubscriptionPage() {
                     <Group justify="space-between" align="flex-start">
                         <div>
                             <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                                {data.profileTitle}
+                                {countryFlag(data.country)} {data.profileTitle}
                             </Text>
                             <Title order={3}>{data.username}</Title>
                         </div>

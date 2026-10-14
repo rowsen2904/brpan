@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 
 import { api, notifyOk } from '@/lib/api';
 import { bytes, date, daysLeft, fromNow } from '@/lib/format';
-import { PROTOCOL_META, type UserDetails } from '@/lib/types';
+import { PROTOCOL_META, type Squad, type UserDetails } from '@/lib/types';
 
 import { Copy, LinkRow, OnlineDot, ProtocolBadge, StatusBadge, TrafficCell } from './common';
 
@@ -26,6 +26,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 export function UserDrawer({ userId, onClose, onEdit }: { userId: number | null; onClose: () => void; onEdit: (id: number) => void }) {
     const qc = useQueryClient();
+    const { data: squads = [] } = useQuery({ queryKey: ['squads'], queryFn: () => api<Squad[]>('/api/squads') });
     const { data } = useQuery({
         queryKey: ['user', userId],
         queryFn: () => api<UserDetails>(`/api/users/${userId}`),
@@ -179,6 +180,14 @@ export function UserDrawer({ userId, onClose, onEdit }: { userId: number | null;
                                         )}
                                     </Field>
                                     <Field label="Created">{date(u.createdAt)}</Field>
+                                    <Field label="Squads">
+                                        {u.squadIds.length
+                                            ? squads
+                                                  .filter((sq) => u.squadIds.includes(sq.id))
+                                                  .map((sq) => sq.name)
+                                                  .join(', ')
+                                            : 'Custom protocols'}
+                                    </Field>
                                     <Field label="UUID">
                                         <Group gap={4} wrap="nowrap">
                                             <Text size="xs" className="mono">

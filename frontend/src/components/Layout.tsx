@@ -1,6 +1,6 @@
 import { ActionIcon, AppShell, Burger, Group, NavLink, ScrollArea, Text, ThemeIcon, Tooltip, useMantineColorScheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconAdjustments, IconLayoutDashboard, IconLogout, IconMoon, IconPlugConnected, IconServer, IconSun, IconUsers } from '@tabler/icons-react';
+import { IconAdjustments, IconLayoutDashboard, IconLogout, IconMoon, IconPlugConnected, IconServer, IconSun, IconUsers, IconUsersGroup } from '@tabler/icons-react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { auth } from '@/lib/api';
@@ -10,6 +10,7 @@ import { Logo } from './Logo';
 const NAV = [
     { to: '/', label: 'Dashboard', icon: IconLayoutDashboard },
     { to: '/users', label: 'Users', icon: IconUsers },
+    { to: '/squads', label: 'Squads', icon: IconUsersGroup },
     { to: '/protocols', label: 'Protocols', icon: IconPlugConnected },
     { to: '/system', label: 'Cores & logs', icon: IconServer },
     { to: '/settings', label: 'Settings', icon: IconAdjustments },

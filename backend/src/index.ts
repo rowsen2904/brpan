@@ -11,6 +11,8 @@ import { apiRoutes } from './routes/api.js';
 import { publicRoutes, sendIndex } from './routes/public.js';
 import { applyCaddy, caddyStatus } from './services/caddy.js';
 import { flushConnections } from './services/conntrack.js';
+import { autoDetectCountry } from './services/geo.js';
+import { ensureDefaultSquad } from './services/squads.js';
 import { openvpn } from './services/openvpn.js';
 import { getSettings } from './services/settings.js';
 import { collectXrayStats, housekeeping } from './services/stats.js';
@@ -44,6 +46,7 @@ app.setNotFoundHandler((req, reply) => {
 });
 
 ensureAdmin((msg) => console.log(`\n==============================\n${msg}\n==============================\n`));
+ensureDefaultSquad();
 const settings = getSettings();
 
 bus.onEvent('user:changed', (user) => {
@@ -86,6 +89,7 @@ bus.onEvent('settings:changed', () => {
             else await wg.stop();
         }
         await applyCaddy();
+        if (!s.country) void autoDetectCountry();
     }, 500);
 });
 
@@ -94,6 +98,7 @@ async function boot() {
     await openvpn.start().catch((e) => console.error('openvpn start failed', e));
     for (const wg of wgServices) await wg.start().catch((e) => console.error(`${wg.kind} start failed`, e));
     await applyCaddy();
+    void autoDetectCountry();
 
     setInterval(() => {
         void collectXrayStats();

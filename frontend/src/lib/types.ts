@@ -22,6 +22,7 @@ export interface User {
     shortId: string;
     status: UserStatus;
     protocols: Protocol[];
+    squadIds: number[];
     trafficLimit: number;
     trafficUsed: number;
     lifetimeUsed: number;
@@ -40,6 +41,14 @@ export interface User {
     subscriptionUrl: string;
     createdAt: number;
     updatedAt: number;
+}
+
+export interface Squad {
+    id: number;
+    name: string;
+    protocols: Protocol[];
+    members: number;
+    createdAt: number;
 }
 
 export interface SubscriptionInfo {

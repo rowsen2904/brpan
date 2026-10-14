@@ -7,6 +7,19 @@ import { bus } from '../lib/bus.js';
 import { hashPassword, randomString, realityKeyPair, sha256, verifyPassword, wgKeyPair } from '../lib/crypto.js';
 import { applyCaddy, buildCaddyfile, caddyStatus } from '../services/caddy.js';
 import { userDto } from '../services/dto.js';
+import {
+    createSquad,
+    defaultSquadIds,
+    deleteSquad,
+    getSquad,
+    listSquads,
+    protocolsForSquads,
+    setUserSquads,
+    squadIdsByUser,
+    updateSquad,
+    userSquadIds,
+    validSquadIds,
+} from '../services/squads.js';
 import { openvpn } from '../services/openvpn.js';
 import { getSettings, publicBaseUrl, updateSettings } from '../services/settings.js';
 import { protocolTotals, topUsers, trafficSince, usageSeries, userCounters } from '../services/stats.js';
@@ -30,7 +43,7 @@ import {
 } from '../services/users.js';
 import { amneziawg, wireguard } from '../services/wireguard.js';
 import { xray } from '../services/xray.js';
-import { PROTOCOLS, RESET_STRATEGIES, USER_STATUSES } from '../types.js';
+import { PROTOCOLS, RESET_STRATEGIES, USER_STATUSES, type Protocol } from '../types.js';
 
 const userBody = z.object({
     username: z.string().trim().min(1).max(64).regex(/^[\w.@+-]+$/, 'Only letters, digits and _.@+- are allowed'),
@@ -43,7 +56,27 @@ const userBody = z.object({
     note: z.string().max(1000).optional(),
     telegramId: z.string().max(64).nullable().optional(),
     email: z.string().max(255).nullable().optional(),
+    squadIds: z.array(z.number().int()).optional(),
 });
+
+const squadBody = z.object({
+    name: z.string().trim().min(1).max(40),
+    protocols: z.array(z.enum(PROTOCOLS)),
+});
+
+// squadIds wins; plain protocols mean a custom set (no squads); nothing on create = default squad.
+function resolveAccess(body: { squadIds?: number[]; protocols?: Protocol[] }, isCreate: boolean) {
+    if (body.squadIds !== undefined) {
+        const squadIds = validSquadIds(body.squadIds);
+        return { protocols: protocolsForSquads(squadIds), squadIds };
+    }
+    if (body.protocols !== undefined) return { protocols: body.protocols, squadIds: [] as number[] };
+    if (isCreate) {
+        const squadIds = defaultSquadIds();
+        return { protocols: protocolsForSquads(squadIds), squadIds };
+    }
+    return { protocols: undefined, squadIds: undefined };
+}
 
 const userTemplate = userBody.omit({ username: true } as const);
 
@@ -200,6 +233,7 @@ export async function apiRoutes(app: FastifyInstance) {
             const day = 86_400_000;
             return {
                 users: userCounters(),
+                country: getSettings().country,
                 system: systemInfo(),
                 cores: {
                     xray: { enabled: true, running: xray.running, version: xray.version, uptime: xray.uptime },
@@ -222,13 +256,18 @@ export async function apiRoutes(app: FastifyInstance) {
         r.get('/api/users', async (req) => {
             const q = listQuery.parse(req.query);
             const { total, rows } = listUsers(q);
-            return { total, users: rows.map(userDto) };
+            const squads = squadIdsByUser();
+            return { total, users: rows.map((u) => userDto(u, squads.get(u.id) ?? [])) };
         });
 
         r.post('/api/users', async (req, reply) => {
             const body = userBody.parse(req.body);
             if (getUserByUsername(body.username)) return reply.code(409).send({ error: 'Username already exists' });
-            return userDto(createUser(body));
+            const { squadIds: _ignored, ...input } = body;
+            const access = resolveAccess(body, true);
+            const user = createUser({ ...input, protocols: access.protocols });
+            if (access.squadIds) setUserSquads(user.id, access.squadIds);
+            return userDto(user, userSquadIds(user.id));
         });
 
         r.post('/api/users/bulk-create', async (req) => {
@@ -239,7 +278,11 @@ export async function apiRoutes(app: FastifyInstance) {
             for (let i = 0; i < body.count; i++) {
                 let username = `${body.prefix}${randomString(5).toLowerCase()}`;
                 while (getUserByUsername(username)) username = `${body.prefix}${randomString(6).toLowerCase()}`;
-                created.push(userDto(createUser({ ...body.template, username })));
+                const { squadIds: _ignored, ...input } = body.template;
+                const access = resolveAccess(body.template, true);
+                const user = createUser({ ...input, username, protocols: access.protocols });
+                if (access.squadIds) setUserSquads(user.id, access.squadIds);
+                created.push(userDto(user, userSquadIds(user.id)));
             }
             return { users: created };
         });
@@ -261,7 +304,7 @@ export async function apiRoutes(app: FastifyInstance) {
             const user = getUser(id);
             if (!user) return reply.code(404).send({ error: 'User not found' });
             return {
-                user: userDto(user),
+                user: userDto(user, userSquadIds(id)),
                 subscription: userSubscriptionInfo(user),
                 devices: listDevices(id),
                 ips: userIps(id),
@@ -279,7 +322,39 @@ export async function apiRoutes(app: FastifyInstance) {
                 if (other && other.id !== id) return reply.code(409).send({ error: 'Username already exists' });
             }
             if (!getUser(id)) return reply.code(404).send({ error: 'User not found' });
-            return userDto(updateUser(id, body));
+            const { squadIds: _ignored, protocols: _p, ...input } = body;
+            const access = resolveAccess(body, false);
+            const user = updateUser(id, { ...input, ...(access.protocols ? { protocols: access.protocols } : {}) });
+            if (access.squadIds) setUserSquads(id, access.squadIds);
+            return userDto(user, userSquadIds(id));
+        });
+
+        r.get('/api/squads', async () => listSquads());
+
+        r.post('/api/squads', async (req, reply) => {
+            const body = squadBody.parse(req.body);
+            if (listSquads().some((sq) => sq.name.toLowerCase() === body.name.toLowerCase())) {
+                return reply.code(409).send({ error: 'Squad name already exists' });
+            }
+            createSquad(body.name, body.protocols);
+            return listSquads();
+        });
+
+        r.patch('/api/squads/:id', async (req, reply) => {
+            const { id } = idParam.parse(req.params);
+            const body = squadBody.partial().parse(req.body);
+            if (!getSquad(id)) return reply.code(404).send({ error: 'Squad not found' });
+            if (body.name && listSquads().some((sq) => sq.id !== id && sq.name.toLowerCase() === body.name!.toLowerCase())) {
+                return reply.code(409).send({ error: 'Squad name already exists' });
+            }
+            updateSquad(id, body);
+            return listSquads();
+        });
+
+        r.delete('/api/squads/:id', async (req) => {
+            const { id } = idParam.parse(req.params);
+            deleteSquad(id);
+            return { ok: true };
         });
 
         r.delete('/api/users/:id', async (req) => {

@@ -105,6 +105,20 @@ const migrations: string[] = [
     CREATE INDEX connection_log_last_idx ON connection_log(last_seen);
     CREATE INDEX connection_log_user_idx ON connection_log(user_id, last_seen);
     `,
+    `
+    CREATE TABLE squads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        protocols TEXT NOT NULL DEFAULT '[]',
+        created_at INTEGER NOT NULL
+    );
+    CREATE TABLE user_squads (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        squad_id INTEGER NOT NULL REFERENCES squads(id) ON DELETE CASCADE,
+        PRIMARY KEY (user_id, squad_id)
+    );
+    CREATE INDEX user_squads_squad_idx ON user_squads(squad_id);
+    `,
 ];
 
 function migrate() {
