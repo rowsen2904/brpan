@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { config } from '../config.js';
 import { get, run } from '../db.js';
 import { randomHex } from '../lib/crypto.js';
+import { AsyncLock } from '../lib/lock.js';
 import { ensureNat } from '../lib/nat.js';
 import { cidrMask, parseCidr, intToIp } from '../lib/net.js';
 import type { UserRow } from '../types.js';
@@ -35,6 +36,7 @@ class OpenVpnService {
     private counters = new Map<string, { recv: number; sent: number }>();
     private startedAt: number | null = null;
     private lastClients: ClientEntry[] = [];
+    private readonly lock = new AsyncLock();
     logs: string[] = [];
     version = '';
 
@@ -182,8 +184,27 @@ class OpenVpnService {
         await ensureNat(DEV, getSettings().protocols.openvpn.subnet, (m) => this.log(m));
     }
 
-    async start() {
-        if (config.disableCores) return;
+    start() {
+        return this.lock.run(() => this.doStart());
+    }
+
+    stop() {
+        return this.lock.run(() => this.doStop());
+    }
+
+    restart() {
+        if (this.restartTimer) {
+            clearTimeout(this.restartTimer);
+            this.restartTimer = null;
+        }
+        return this.lock.run(async () => {
+            await this.doStop();
+            await this.doStart();
+        });
+    }
+
+    private async doStart() {
+        if (config.disableCores || this.running) return;
         const s = getSettings();
         if (!s.protocols.openvpn.enabled) return;
         try {
@@ -214,10 +235,12 @@ class OpenVpnService {
         });
     }
 
-    async stop() {
+    private async doStop() {
         this.stopping = true;
         const proc = this.proc;
-        if (!proc) return;
+        this.proc = null;
+        this.startedAt = null;
+        if (!proc || proc.exitCode !== null) return;
         await new Promise<void>((resolve) => {
             const timer = setTimeout(() => {
                 proc.kill('SIGKILL');
@@ -229,12 +252,6 @@ class OpenVpnService {
             });
             proc.kill('SIGTERM');
         });
-        this.proc = null;
-    }
-
-    async restart() {
-        await this.stop();
-        await this.start();
     }
 
     scheduleRestart(delay = 1000) {

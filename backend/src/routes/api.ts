@@ -440,7 +440,7 @@ export async function apiRoutes(app: FastifyInstance) {
             caddy: { ...caddyStatus(), caddyfile: buildCaddyfile() },
         }));
 
-        r.get('/api/system/xray/config', async () => xray.writeConfig());
+        r.get('/api/system/xray/config', async () => xray.buildConfig());
 
         r.post('/api/system/:core/restart', async (req) => {
             const { core } = z.object({ core: z.enum(['xray', 'openvpn', 'caddy', 'wireguard', 'amneziawg']) }).parse(req.params);

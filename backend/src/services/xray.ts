@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 import { XtlsApi } from '@remnawave/xtls-sdk';
 
 import { config } from '../config.js';
+import { AsyncLock } from '../lib/lock.js';
 import { XRAY_PROTOCOLS, type Protocol, type UserRow } from '../types.js';
 import { ingest as conntrackIngest } from './conntrack.js';
 import { getSettings } from './settings.js';
@@ -41,6 +42,8 @@ class XrayService {
     private restartTimer: NodeJS.Timeout | null = null;
     private startedAt: number | null = null;
     private certFingerprint: string | null = null;
+    private certCache: { key: string; info: { pinSha256: string | null; selfSigned: boolean } } | null = null;
+    private readonly lock = new AsyncLock();
     readonly logs = new LogBuffer();
     version = '';
     api = new XtlsApi({ connectionUrl: `127.0.0.1:${config.xrayApiPort}` });
@@ -94,23 +97,51 @@ class XrayService {
     certInfo(): { pinSha256: string | null; selfSigned: boolean } {
         const tls = this.tlsFiles();
         if (!tls) return { pinSha256: null, selfSigned: true };
+        const key = this.currentCertFingerprint() ?? tls.certFile;
+        if (this.certCache?.key === key) return this.certCache.info;
         const selfSigned = tls.certFile.includes(`${path.sep}tls${path.sep}selfsigned`);
+        let info: { pinSha256: string | null; selfSigned: boolean };
         try {
             const cert = new crypto.X509Certificate(fs.readFileSync(tls.certFile));
-            return { pinSha256: cert.fingerprint256.replaceAll(':', '').toLowerCase(), selfSigned };
+            info = { pinSha256: cert.fingerprint256.replaceAll(':', '').toLowerCase(), selfSigned };
         } catch {
-            return { pinSha256: null, selfSigned };
+            info = { pinSha256: null, selfSigned };
         }
+        this.certCache = { key, info };
+        return info;
+    }
+
+    buildConfig() {
+        return buildXrayConfig(getSettings(), allUsers(), this.tlsFiles());
     }
 
     writeConfig() {
-        const cfg = buildXrayConfig(getSettings(), allUsers(), this.tlsFiles());
+        const cfg = this.buildConfig();
         fs.writeFileSync(this.configPath, JSON.stringify(cfg, null, 2));
         return cfg;
     }
 
-    async start() {
-        if (config.disableCores) return;
+    start() {
+        return this.lock.run(() => this.doStart());
+    }
+
+    stop() {
+        return this.lock.run(() => this.doStop());
+    }
+
+    restart() {
+        if (this.restartTimer) {
+            clearTimeout(this.restartTimer);
+            this.restartTimer = null;
+        }
+        return this.lock.run(async () => {
+            await this.doStop();
+            await this.doStart();
+        });
+    }
+
+    private async doStart() {
+        if (config.disableCores || this.running) return;
         await this.ensureSelfSigned();
         await this.detectVersion();
         this.writeConfig();
@@ -140,10 +171,12 @@ class XrayService {
         conntrackIngest(chunk);
     }
 
-    async stop() {
+    private async doStop() {
         this.stopping = true;
         const proc = this.proc;
-        if (!proc) return;
+        this.proc = null;
+        this.startedAt = null;
+        if (!proc || proc.exitCode !== null) return;
         await new Promise<void>((resolve) => {
             const timer = setTimeout(() => {
                 proc.kill('SIGKILL');
@@ -155,16 +188,6 @@ class XrayService {
             });
             proc.kill('SIGTERM');
         });
-        this.proc = null;
-    }
-
-    async restart() {
-        if (this.restartTimer) {
-            clearTimeout(this.restartTimer);
-            this.restartTimer = null;
-        }
-        await this.stop();
-        await this.start();
     }
 
     scheduleRestart(delay = 1000) {

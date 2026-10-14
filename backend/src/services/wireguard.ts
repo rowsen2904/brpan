@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import { config } from '../config.js';
 import { all } from '../db.js';
+import { AsyncLock } from '../lib/lock.js';
 import { ensureNat, sh } from '../lib/nat.js';
 import { parseCidr, serverIp, wgClientIp } from '../lib/net.js';
 import type { Settings, UserRow } from '../types.js';
@@ -28,6 +29,7 @@ export class WgService {
     private startedAt: number | null = null;
     private up = false;
     private mode: 'kernel' | 'userspace' | null = null;
+    private readonly lock = new AsyncLock();
     logs: string[] = [];
 
     constructor(
@@ -142,8 +144,27 @@ export class WgService {
         throw new Error(`UAPI socket ${sock} did not appear`);
     }
 
-    async start() {
-        if (config.disableCores || os.platform() !== 'linux') return;
+    start() {
+        return this.lock.run(() => this.doStart());
+    }
+
+    stop() {
+        return this.lock.run(() => this.doStop());
+    }
+
+    restart() {
+        if (this.restartTimer) {
+            clearTimeout(this.restartTimer);
+            this.restartTimer = null;
+        }
+        return this.lock.run(async () => {
+            await this.doStop();
+            await this.doStart();
+        });
+    }
+
+    private async doStart() {
+        if (config.disableCores || os.platform() !== 'linux' || this.running) return;
         if (!this.cfg.enabled) return;
         this.stopping = false;
         this.counters.clear();
@@ -161,17 +182,19 @@ export class WgService {
             this.startedAt = Date.now();
         } catch (e) {
             this.log(`[panel] ${this.kind} start failed: ${(e as Error).message}`);
-            await this.stop();
+            await this.doStop();
             this.stopping = false;
             this.scheduleRestart(15000);
         }
     }
 
-    async stop() {
+    private async doStop() {
         this.stopping = true;
         this.up = false;
         const proc = this.proc;
-        if (!proc) {
+        this.proc = null;
+        this.startedAt = null;
+        if (!proc || proc.exitCode !== null) {
             if (this.mode === 'kernel') await sh('ip', ['link', 'del', this.iface]).catch(() => undefined);
             return;
         }
@@ -186,13 +209,7 @@ export class WgService {
             });
             proc.kill('SIGTERM');
         });
-        this.proc = null;
         await sh('ip', ['link', 'del', this.iface]).catch(() => undefined);
-    }
-
-    async restart() {
-        await this.stop();
-        await this.start();
     }
 
     scheduleRestart(delay = 1000) {

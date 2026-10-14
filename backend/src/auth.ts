@@ -53,3 +53,7 @@ export function loginFailed(ip: string) {
 export function loginSucceeded(ip: string) {
     attempts.delete(ip);
 }
+
+export function pruneLoginAttempts(now = Date.now()) {
+    for (const [ip, a] of attempts) if (a.until < now) attempts.delete(ip);
+}

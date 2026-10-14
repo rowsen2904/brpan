@@ -1,3 +1,4 @@
+import { pruneLoginAttempts } from '../auth.js';
 import { all, get, run, tx } from '../db.js';
 import { bus } from '../lib/bus.js';
 import { purgeOldConnections } from './conntrack.js';
@@ -127,6 +128,7 @@ export function housekeeping() {
     periodicResets(new Date(now));
     run('DELETE FROM user_ips WHERE last_seen < ?', now - 7 * 86_400_000);
     purgeOldConnections(now);
+    pruneLoginAttempts(now);
     run('DELETE FROM user_usage WHERE hour < ?', hourOf(now - 400 * 86_400_000));
     run('DELETE FROM protocol_usage WHERE hour < ?', hourOf(now - 400 * 86_400_000));
 }

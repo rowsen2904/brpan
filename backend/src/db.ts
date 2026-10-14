@@ -119,6 +119,11 @@ const migrations: string[] = [
     );
     CREATE INDEX user_squads_squad_idx ON user_squads(squad_id);
     `,
+    `
+    CREATE INDEX user_ips_last_idx ON user_ips(last_seen);
+    CREATE INDEX user_usage_hour_idx ON user_usage(hour);
+    CREATE INDEX users_online_idx ON users(online_at);
+    `,
 ];
 
 function migrate() {

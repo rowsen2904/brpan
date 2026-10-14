@@ -167,7 +167,9 @@ export function updateUser(id: number, input: Partial<UserInput>): UserRow {
     set('updated_at', Date.now());
     run(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, ...params, id);
     const updated = refreshStatus(getUser(id)!);
-    bus.emitEvent('user:changed', updated);
+    // Only status and protocols matter to the cores; a note or expiry edit must not
+    // remove-and-re-add the user in every inbound.
+    if (updated.status !== user.status || updated.protocols !== user.protocols) bus.emitEvent('user:changed', updated);
     return updated;
 }
 
@@ -197,9 +199,11 @@ export function deleteUser(id: number) {
 }
 
 export function resetTraffic(id: number): UserRow {
+    const before = getUser(id);
+    if (!before) throw new Error('User not found');
     run('UPDATE users SET traffic_used = 0, last_reset_at = ?, updated_at = ? WHERE id = ?', Date.now(), Date.now(), id);
     const user = refreshStatus(getUser(id)!);
-    bus.emitEvent('user:changed', user);
+    if (user.status !== before.status) bus.emitEvent('user:changed', user);
     return user;
 }
 
