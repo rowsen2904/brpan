@@ -1,4 +1,4 @@
-import { ActionIcon, Alert, Button, Group, NumberInput, Paper, PasswordInput, SegmentedControl, SimpleGrid, Stack, Switch, Table, Text, Textarea, TextInput, Title } from '@mantine/core';
+import { ActionIcon, Alert, Button, Group, NumberInput, Paper, PasswordInput, SegmentedControl, Select, SimpleGrid, Stack, Switch, Table, Text, Textarea, TextInput, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { modals } from '@mantine/modals';
 import { IconAlertTriangle, IconKey, IconTrash } from '@tabler/icons-react';
@@ -8,14 +8,15 @@ import { useEffect, useState } from 'react';
 import { Copy } from '@/components/common';
 import { api, notifyOk } from '@/lib/api';
 import { date } from '@/lib/format';
+import { COUNTRIES } from '@/lib/countries';
 import type { Settings } from '@/lib/types';
 
-type General = Pick<Settings, 'domain' | 'serverAddress' | 'remarkPrefix' | 'subscription' | 'limits' | 'logging'>;
+type General = Pick<Settings, 'domain' | 'serverAddress' | 'remarkPrefix' | 'country' | 'subscription' | 'limits' | 'logging'>;
 
 function GeneralForm({ settings }: { settings: Settings }) {
     const qc = useQueryClient();
     const [saving, setSaving] = useState(false);
-    const pick = (s: Settings): General => ({ domain: s.domain, serverAddress: s.serverAddress, remarkPrefix: s.remarkPrefix, subscription: s.subscription, limits: s.limits, logging: s.logging });
+    const pick = (s: Settings): General => ({ domain: s.domain, serverAddress: s.serverAddress, remarkPrefix: s.remarkPrefix, country: s.country, subscription: s.subscription, limits: s.limits, logging: s.logging });
     const form = useForm<General>({ initialValues: pick(settings) });
     useEffect(() => {
         form.setValues(pick(settings));
@@ -41,10 +42,11 @@ function GeneralForm({ settings }: { settings: Settings }) {
                     <Text fw={600} mb="sm">
                         Server
                     </Text>
-                    <SimpleGrid cols={{ base: 1, md: 3 }}>
+                    <SimpleGrid cols={{ base: 1, md: 2 }}>
                         <TextInput label="Domain" description="Panel, subscriptions, TLS for XHTTP/Trojan/Hysteria2" placeholder="vpn.example.com" {...form.getInputProps('domain')} />
                         <TextInput label="Server address in keys" description="Domain or IP clients connect to" {...form.getInputProps('serverAddress')} />
                         <TextInput label="Remark prefix" description="Shown before protocol name in clients" {...form.getInputProps('remarkPrefix')} />
+                        <Select label="Country flag" description="Flag shown before server names in clients" searchable data={COUNTRIES} {...form.getInputProps('country')} />
                     </SimpleGrid>
                     <Text size="xs" c="dimmed" mt="sm">
                         Public base URL: {settings.publicBaseUrl}

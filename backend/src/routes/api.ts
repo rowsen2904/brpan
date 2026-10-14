@@ -63,6 +63,8 @@ const settingsPatch = z
         domain: z.string().trim().max(253),
         serverAddress: z.string().trim().max(253),
         remarkPrefix: z.string().max(64),
+        country: z.string().regex(/^([A-Za-z]{2})?$/),
+        mainProtocol: z.enum(PROTOCOLS).nullable(),
         subscription: z
             .object({
                 profileTitle: z.string().min(1).max(64),

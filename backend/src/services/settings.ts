@@ -21,6 +21,8 @@ function defaults(): Settings {
         domain,
         serverAddress: config.serverAddress || domain,
         remarkPrefix: 'BRPAN',
+        country: '',
+        mainProtocol: 'vless-reality',
         subscription: {
             profileTitle: 'BRPAN VPN',
             updateIntervalHours: 12,

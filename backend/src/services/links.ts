@@ -1,3 +1,4 @@
+import { countryFlag } from '../lib/flag.js';
 import { wgClientIp } from '../lib/net.js';
 import type { Protocol, Settings, UserRow } from '../types.js';
 import { publicHttpsPort } from './settings.js';
@@ -31,7 +32,14 @@ function host(address: string) {
 }
 
 export function remark(s: Settings, protocol: Protocol) {
-    return s.remarkPrefix ? `${s.remarkPrefix} ${PROTOCOL_LABELS[protocol]}` : PROTOCOL_LABELS[protocol];
+    const base = s.remarkPrefix ? `${s.remarkPrefix} ${PROTOCOL_LABELS[protocol]}` : PROTOCOL_LABELS[protocol];
+    const flag = countryFlag(s.country);
+    return flag ? `${flag} ${base}` : base;
+}
+
+export function orderProtocols(list: Protocol[], main: Protocol | null): Protocol[] {
+    if (!main || !list.includes(main)) return list;
+    return [main, ...list.filter((p) => p !== main)];
 }
 
 export function serverAddress(s: Settings) {
@@ -116,12 +124,13 @@ export function shareLink(protocol: Protocol, user: UserRow, s: Settings, tls: T
 }
 
 export function availableProtocols(user: UserRow, s: Settings, hasHy2Tls: boolean): Protocol[] {
-    return (Object.keys(s.protocols) as Protocol[]).filter((p) => {
+    const list = (Object.keys(s.protocols) as Protocol[]).filter((p) => {
         if (!s.protocols[p].enabled || !hasProtocol(user, p)) return false;
         if ((p === 'vless-xhttp' || p === 'trojan-ws') && !s.domain) return false;
         if (p === 'hysteria2' && !hasHy2Tls) return false;
         return true;
     });
+    return orderProtocols(list, s.mainProtocol);
 }
 
 export function outlineKey(user: UserRow, s: Settings) {

@@ -129,6 +129,8 @@ export interface Settings {
     domain: string;
     serverAddress: string;
     remarkPrefix: string;
+    country: string;
+    mainProtocol: Protocol | null;
     subscription: {
         profileTitle: string;
         updateIntervalHours: number;

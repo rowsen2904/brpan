@@ -94,6 +94,8 @@ export interface Settings {
     domain: string;
     serverAddress: string;
     remarkPrefix: string;
+    country: string;
+    mainProtocol: Protocol | null;
     publicBaseUrl: string;
     subscription: {
         profileTitle: string;

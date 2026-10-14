@@ -1,11 +1,12 @@
-import { Alert, Badge, Button, Group, NumberInput, Paper, PasswordInput, Select, SimpleGrid, Stack, Switch, TagsInput, Text, TextInput, Title } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Button, Group, NumberInput, Paper, PasswordInput, Select, SimpleGrid, Stack, Switch, TagsInput, Text, TextInput, Title, Tooltip } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { modals } from '@mantine/modals';
-import { IconInfoCircle, IconRefresh } from '@tabler/icons-react';
+import { IconInfoCircle, IconRefresh, IconStar, IconStarFilled } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { Copy } from '@/components/common';
+import { countryFlag } from '@/lib/countries';
 import { api, notifyOk } from '@/lib/api';
 import { PROTOCOL_META, type Protocol, type Settings } from '@/lib/types';
 
@@ -33,6 +34,13 @@ function ProtocolCard<K extends keyof P>({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [settings]);
     const meta = PROTOCOL_META[id as Protocol];
+    const isMain = settings.mainProtocol === id;
+
+    const setMain = async () => {
+        await api('/api/settings', { method: 'PATCH', body: { mainProtocol: isMain ? null : (id as Protocol) } });
+        notifyOk(isMain ? 'Main protocol cleared' : `${meta.label} set as main`);
+        await qc.invalidateQueries({ queryKey: ['settings'] });
+    };
 
     const save = form.onSubmit(async (values) => {
         setSaving(true);
@@ -54,13 +62,20 @@ function ProtocolCard<K extends keyof P>({
                     <Group justify="space-between" wrap="nowrap">
                         <Group gap="xs">
                             <Badge color={meta.color} variant="light" size="lg">
-                                {meta.label}
+                                {countryFlag(settings.country)} {meta.label}
                             </Badge>
                             <Text size="xs" c="dimmed">
                                 {ports}
                             </Text>
                         </Group>
-                        <Switch {...form.getInputProps('enabled' as never, { type: 'checkbox' })} />
+                        <Group gap="xs">
+                            <Tooltip label={isMain ? 'Main protocol (shown first in subscriptions)' : 'Set as main'}>
+                                <ActionIcon variant={isMain ? 'filled' : 'subtle'} color="yellow" onClick={setMain}>
+                                    {isMain ? <IconStarFilled size={16} /> : <IconStar size={16} />}
+                                </ActionIcon>
+                            </Tooltip>
+                            <Switch {...form.getInputProps('enabled' as never, { type: 'checkbox' })} />
+                        </Group>
                     </Group>
                     <Text size="xs" c="dimmed">
                         Clients: {meta.clients}
