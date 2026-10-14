@@ -27,6 +27,7 @@ export class WgService {
     private counters = new Map<string, { rx: number; tx: number }>();
     private startedAt: number | null = null;
     private up = false;
+    private mode: 'kernel' | 'userspace' | null = null;
     logs: string[] = [];
 
     constructor(
@@ -35,7 +36,51 @@ export class WgService {
     ) {}
 
     get running() {
-        return this.up && this.proc !== null && this.proc.exitCode === null;
+        if (!this.up) return false;
+        return this.mode === 'kernel' || (this.proc !== null && this.proc.exitCode === null);
+    }
+
+    get engine() {
+        return this.mode;
+    }
+
+    private get tool() {
+        return this.mode === 'kernel' && this.kind === 'wireguard' ? config.wgToolBin : config.awgToolBin;
+    }
+
+    private async tryKernel(): Promise<boolean> {
+        const type = this.kind === 'wireguard' ? 'wireguard' : 'amneziawg';
+        try {
+            await sh('ip', ['link', 'add', this.iface, 'type', type]);
+            this.mode = 'kernel';
+            this.log(`[panel] using kernel ${type} module`);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    private async startUserspace() {
+        this.mode = 'userspace';
+        const proc = spawn(config.awgBin, ['-f', this.iface], {
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: { ...process.env, LOG_LEVEL: 'error' },
+        });
+        this.proc = proc;
+        proc.stdout?.on('data', (d) => this.log(String(d)));
+        proc.stderr?.on('data', (d) => this.log(String(d)));
+        proc.on('error', (e) => this.log(`[panel] ${this.kind} spawn error: ${e.message}`));
+        proc.on('exit', (code) => {
+            this.log(`[panel] ${this.kind} exited with code ${code}`);
+            if (this.proc === proc) {
+                this.proc = null;
+                this.up = false;
+                this.startedAt = null;
+            }
+            if (!this.stopping && this.cfg.enabled) this.scheduleRestart(5000);
+        });
+        await this.waitSocket();
+        this.log(`[panel] using userspace amneziawg-go`);
     }
 
     get uptime() {
@@ -104,27 +149,10 @@ export class WgService {
         this.counters.clear();
         try {
             await sh('ip', ['link', 'del', this.iface]).catch(() => undefined);
-            const proc = spawn(config.awgBin, ['-f', this.iface], {
-                stdio: ['ignore', 'pipe', 'pipe'],
-                env: { ...process.env, LOG_LEVEL: 'error' },
-            });
-            this.proc = proc;
-            proc.stdout?.on('data', (d) => this.log(String(d)));
-            proc.stderr?.on('data', (d) => this.log(String(d)));
-            proc.on('error', (e) => this.log(`[panel] ${this.kind} spawn error: ${e.message}`));
-            proc.on('exit', (code) => {
-                this.log(`[panel] ${this.kind} exited with code ${code}`);
-                if (this.proc === proc) {
-                    this.proc = null;
-                    this.up = false;
-                    this.startedAt = null;
-                }
-                if (!this.stopping && this.cfg.enabled) this.scheduleRestart(5000);
-            });
-            await this.waitSocket();
+            if (!(await this.tryKernel())) await this.startUserspace();
             const confPath = path.join(config.dataDir, `${this.iface}.conf`);
             fs.writeFileSync(confPath, this.serverConf(), { mode: 0o600 });
-            await sh(config.awgToolBin, ['setconf', this.iface, confPath]);
+            await sh(this.tool, ['setconf', this.iface, confPath]);
             const { prefix } = parseCidr(this.cfg.subnet);
             await sh('ip', ['address', 'replace', `${serverIp(this.cfg.subnet)}/${prefix}`, 'dev', this.iface]);
             await sh('ip', ['link', 'set', 'mtu', String(this.cfg.mtu), 'up', 'dev', this.iface]);
@@ -143,7 +171,10 @@ export class WgService {
         this.stopping = true;
         this.up = false;
         const proc = this.proc;
-        if (!proc) return;
+        if (!proc) {
+            if (this.mode === 'kernel') await sh('ip', ['link', 'del', this.iface]).catch(() => undefined);
+            return;
+        }
         await new Promise<void>((resolve) => {
             const timer = setTimeout(() => {
                 proc.kill('SIGKILL');
@@ -174,7 +205,7 @@ export class WgService {
 
     async removePeer(publicKey: string) {
         if (!this.running) return;
-        await sh(config.awgToolBin, ['set', this.iface, 'peer', publicKey, 'remove']).catch(() => undefined);
+        await sh(this.tool, ['set', this.iface, 'peer', publicKey, 'remove']).catch(() => undefined);
         this.counters.delete(publicKey);
     }
 
@@ -186,7 +217,7 @@ export class WgService {
             return;
         }
         try {
-            await sh(config.awgToolBin, [
+            await sh(this.tool, [
                 'set',
                 this.iface,
                 'peer',
@@ -204,7 +235,7 @@ export class WgService {
         if (!this.running) return;
         let dump: string;
         try {
-            dump = await sh(config.awgToolBin, ['show', this.iface, 'dump']);
+            dump = await sh(this.tool, ['show', this.iface, 'dump']);
         } catch {
             return;
         }

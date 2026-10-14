@@ -338,8 +338,8 @@ export async function apiRoutes(app: FastifyInstance) {
         r.get('/api/system/cores', async () => ({
             xray: { running: xray.running, version: xray.version, uptime: xray.uptime, logs: xray.logs.get().slice(-200) },
             openvpn: { running: openvpn.running, version: openvpn.version, uptime: openvpn.uptime, logs: openvpn.logs.slice(-200) },
-            wireguard: { running: wireguard.running, uptime: wireguard.uptime, logs: wireguard.logs.slice(-200) },
-            amneziawg: { running: amneziawg.running, uptime: amneziawg.uptime, logs: amneziawg.logs.slice(-200) },
+            wireguard: { running: wireguard.running, version: wireguard.engine ?? undefined, uptime: wireguard.uptime, logs: wireguard.logs.slice(-200) },
+            amneziawg: { running: amneziawg.running, version: amneziawg.engine ?? undefined, uptime: amneziawg.uptime, logs: amneziawg.logs.slice(-200) },
             caddy: { ...caddyStatus(), caddyfile: buildCaddyfile() },
         }));
 

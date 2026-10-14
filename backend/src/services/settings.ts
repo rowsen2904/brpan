@@ -143,8 +143,15 @@ function persist(settings: Settings) {
 }
 
 export function updateSettings(patch: DeepPartial<Settings>): Settings {
-    const next = merge(getSettings(), patch);
+    const prev = getSettings();
+    const next = merge(prev, patch);
     const reality = next.protocols['vless-reality'];
+    if (patch.domain !== undefined && patch.domain !== prev.domain && !patch.protocols?.['vless-reality']?.serverNames) {
+        const names = reality.serverNames.filter((n) => n !== prev.domain);
+        if (next.domain && reality.target === `127.0.0.1:${config.caddyHttpsPort}`) names.unshift(next.domain);
+        reality.serverNames = names.length ? names : [next.domain || 'www.google.com'];
+        if (!next.serverAddress || next.serverAddress === prev.domain) next.serverAddress = next.domain;
+    }
     if (patch.protocols?.['vless-reality']?.privateKey) {
         reality.publicKey = realityPublicKeySafe(reality.privateKey) ?? reality.publicKey;
     }

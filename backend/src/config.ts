@@ -22,6 +22,7 @@ export const config = {
     caddyfilePath: env.CADDYFILE_PATH ?? '',
     awgBin: env.AWG_BIN ?? 'amneziawg-go',
     awgToolBin: env.AWG_TOOL_BIN ?? 'awg',
+    wgToolBin: env.WG_TOOL_BIN ?? 'wg',
     openvpnBin: env.OPENVPN_BIN ?? 'openvpn',
     opensslBin: env.OPENSSL_BIN ?? 'openssl',
     staticDir: env.STATIC_DIR ?? path.resolve('../frontend/dist'),

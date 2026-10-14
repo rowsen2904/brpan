@@ -1,0 +1,43 @@
+services:
+  brpan:
+    build: .
+    image: brpan:latest
+    container_name: brpan
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    env_file: .env
+    volumes:
+      - ./data:/var/lib/brpan
+      - ./caddy:/etc/brpan-caddy
+      - caddy_data:/caddy-data:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  caddy:
+    image: caddy:2.10
+    container_name: brpan-caddy
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./caddy:/etc/caddy
+      - caddy_data:/data
+      - caddy_config:/config
+    command: >
+      sh -c 'until [ -s /etc/caddy/Caddyfile ]; do echo "waiting for panel to write Caddyfile"; sleep 2; done;
+      exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

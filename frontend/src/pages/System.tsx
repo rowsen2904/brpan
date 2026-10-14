@@ -69,7 +69,7 @@ export function SystemPage() {
                                         <Badge color={core.running ? 'teal' : 'red'} variant="light">
                                             {core.running ? 'running' : 'stopped'}
                                         </Badge>
-                                        {core.version && <Text size="sm">v{core.version}</Text>}
+                                        {core.version && <Text size="sm">{/^\d/.test(core.version) ? `v${core.version}` : core.version}</Text>}
                                         {core.running && core.uptime ? (
                                             <Text size="xs" c="dimmed">
                                                 uptime {duration(core.uptime)}
