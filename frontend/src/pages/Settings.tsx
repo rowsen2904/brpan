@@ -1,7 +1,7 @@
 import { ActionIcon, Alert, Button, Group, NumberInput, Paper, PasswordInput, SegmentedControl, SimpleGrid, Stack, Switch, Table, Text, Textarea, TextInput, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { modals } from '@mantine/modals';
-import { IconKey, IconTrash } from '@tabler/icons-react';
+import { IconAlertTriangle, IconKey, IconTrash } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
@@ -10,12 +10,12 @@ import { api, notifyOk } from '@/lib/api';
 import { date } from '@/lib/format';
 import type { Settings } from '@/lib/types';
 
-type General = Pick<Settings, 'domain' | 'serverAddress' | 'remarkPrefix' | 'subscription' | 'limits'>;
+type General = Pick<Settings, 'domain' | 'serverAddress' | 'remarkPrefix' | 'subscription' | 'limits' | 'logging'>;
 
 function GeneralForm({ settings }: { settings: Settings }) {
     const qc = useQueryClient();
     const [saving, setSaving] = useState(false);
-    const pick = (s: Settings): General => ({ domain: s.domain, serverAddress: s.serverAddress, remarkPrefix: s.remarkPrefix, subscription: s.subscription, limits: s.limits });
+    const pick = (s: Settings): General => ({ domain: s.domain, serverAddress: s.serverAddress, remarkPrefix: s.remarkPrefix, subscription: s.subscription, limits: s.limits, logging: s.logging });
     const form = useForm<General>({ initialValues: pick(settings) });
     useEffect(() => {
         form.setValues(pick(settings));
@@ -106,6 +106,55 @@ function GeneralForm({ settings }: { settings: Settings }) {
                             <NumberInput label="Window, seconds" min={10} max={3600} {...form.getInputProps('limits.ipWindowSec')} />
                             <NumberInput label="Block duration, minutes" min={1} max={1440} {...form.getInputProps('limits.blockMinutes')} />
                         </SimpleGrid>
+                    </Stack>
+                </Paper>
+
+                <Paper withBorder p="md" className="glass">
+                    <Text fw={600} mb="sm">
+                        Connection logging
+                    </Text>
+                    <Stack>
+                        <Switch
+                            label="Log visited domains per user"
+                            description="Records the destination domain (SNI) of each Xray connection in the database so you can see what a user accesses"
+                            {...form.getInputProps('logging.connectionLog', { type: 'checkbox' })}
+                        />
+                        {form.values.logging.connectionLog && (
+                            <Alert color="orange" variant="light" icon={<IconAlertTriangle size={16} />}>
+                                This is privacy-invasive and stores browsing metadata of your users. Only the domain is visible — not the page content, URL or
+                                messages. WireGuard, AmneziaWG and OpenVPN are not logged (they do not pass through Xray). Make sure this is lawful and disclosed to
+                                your users where required.
+                            </Alert>
+                        )}
+                        <NumberInput
+                            label="Keep records for, days"
+                            description="Older entries are deleted automatically"
+                            min={1}
+                            max={365}
+                            disabled={!form.values.logging.connectionLog}
+                            {...form.getInputProps('logging.retentionDays')}
+                        />
+                        <Group>
+                            <Button
+                                variant="light"
+                                color="red"
+                                size="xs"
+                                onClick={() =>
+                                    modals.openConfirmModal({
+                                        title: 'Clear all connection logs',
+                                        children: <Text size="sm">Delete every stored domain record for all users? This cannot be undone.</Text>,
+                                        labels: { confirm: 'Delete all', cancel: 'Cancel' },
+                                        confirmProps: { color: 'red' },
+                                        onConfirm: async () => {
+                                            await api('/api/system/connections', { method: 'DELETE' });
+                                            notifyOk('Connection logs cleared');
+                                        },
+                                    })
+                                }
+                            >
+                                Clear all logs now
+                            </Button>
+                        </Group>
                     </Stack>
                 </Paper>
 

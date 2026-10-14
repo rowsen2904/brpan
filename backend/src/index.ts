@@ -10,6 +10,7 @@ import { bus } from './lib/bus.js';
 import { apiRoutes } from './routes/api.js';
 import { publicRoutes, sendIndex } from './routes/public.js';
 import { applyCaddy, caddyStatus } from './services/caddy.js';
+import { flushConnections } from './services/conntrack.js';
 import { openvpn } from './services/openvpn.js';
 import { getSettings } from './services/settings.js';
 import { collectXrayStats, housekeeping } from './services/stats.js';
@@ -57,14 +58,20 @@ bus.onEvent('user:deleted', (user) => {
     void openvpn.kickUser(user);
 });
 
+const xraySig = (s = getSettings()) => JSON.stringify({ p: s.protocols, d: s.domain, a: s.serverAddress });
 let settingsTimer: NodeJS.Timeout | null = null;
 let ovpnSignature = JSON.stringify(settings.protocols.openvpn);
+let xraySignature = xraySig(settings);
 const wgSignatures = new Map(wgServices.map((w) => [w.kind, JSON.stringify(settings.protocols[w.kind])]));
 bus.onEvent('settings:changed', () => {
     if (settingsTimer) clearTimeout(settingsTimer);
     settingsTimer = setTimeout(async () => {
         const s = getSettings();
-        await xray.restart().catch(() => undefined);
+        const nextXraySig = xraySig(s);
+        if (nextXraySig !== xraySignature) {
+            xraySignature = nextXraySig;
+            await xray.restart().catch(() => undefined);
+        }
         const sig = JSON.stringify(s.protocols.openvpn);
         if (sig !== ovpnSignature) {
             ovpnSignature = sig;
@@ -92,6 +99,7 @@ async function boot() {
         void collectXrayStats();
         void openvpn.collect();
         for (const wg of wgServices) void wg.collect();
+        flushConnections();
     }, config.statsIntervalSec * 1000);
     setInterval(() => {
         try {

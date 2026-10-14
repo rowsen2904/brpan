@@ -92,6 +92,19 @@ const migrations: string[] = [
         created_at INTEGER NOT NULL
     );
     `,
+    `
+    CREATE TABLE connection_log (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        host TEXT NOT NULL,
+        protocol TEXT NOT NULL,
+        hits INTEGER NOT NULL DEFAULT 0,
+        first_seen INTEGER NOT NULL,
+        last_seen INTEGER NOT NULL,
+        PRIMARY KEY (user_id, host)
+    );
+    CREATE INDEX connection_log_last_idx ON connection_log(last_seen);
+    CREATE INDEX connection_log_user_idx ON connection_log(user_id, last_seen);
+    `,
 ];
 
 function migrate() {

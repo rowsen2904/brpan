@@ -27,5 +27,6 @@ export const config = {
     opensslBin: env.OPENSSL_BIN ?? 'openssl',
     staticDir: env.STATIC_DIR ?? path.resolve('../frontend/dist'),
     statsIntervalSec: Number(env.STATS_INTERVAL ?? 15),
+    connectionLogDefault: (env.CONNECTION_LOG ?? 'false') === 'true',
     disableCores: env.DISABLE_CORES === 'true',
 };

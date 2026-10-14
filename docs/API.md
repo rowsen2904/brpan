@@ -49,6 +49,8 @@ POST /api/users
 | POST | `/api/users/:id/enable` / `disable` | Включить / выключить |
 | DELETE | `/api/users/:id/devices` | Сбросить все HWID-устройства |
 | DELETE | `/api/users/:id/devices/:deviceId` | Удалить одно устройство |
+| DELETE | `/api/users/:id/connections` | Очистить лог доменов пользователя |
+| DELETE | `/api/system/connections` | Очистить логи доменов всех пользователей |
 | POST | `/api/users/bulk` | `{ "ids": [1,2], "action": "enable\|disable\|delete\|reset\|revoke\|extend", "days": 30 }` |
 | POST | `/api/users/bulk-create` | `{ "prefix": "user_", "count": 10, "template": { ...поля пользователя без username } }` |
 

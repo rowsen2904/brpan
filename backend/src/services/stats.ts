@@ -1,5 +1,6 @@
 import { all, get, run, tx } from '../db.js';
 import { bus } from '../lib/bus.js';
+import { purgeOldConnections } from './conntrack.js';
 import { getSettings } from './settings.js';
 import { blockUser, expireUsers, getUser, periodicResets, refreshStatus } from './users.js';
 import { xray } from './xray.js';
@@ -125,6 +126,7 @@ export function housekeeping() {
     expireUsers(now);
     periodicResets(new Date(now));
     run('DELETE FROM user_ips WHERE last_seen < ?', now - 7 * 86_400_000);
+    purgeOldConnections(now);
     run('DELETE FROM user_usage WHERE hour < ?', hourOf(now - 400 * 86_400_000));
     run('DELETE FROM protocol_usage WHERE hour < ?', hourOf(now - 400 * 86_400_000));
 }

@@ -72,12 +72,22 @@ export interface UsagePoint {
     down: number;
 }
 
+export interface Connection {
+    host: string;
+    protocol: string;
+    hits: number;
+    first_seen: number;
+    last_seen: number;
+}
+
 export interface UserDetails {
     user: User;
     subscription: SubscriptionInfo;
     devices: Device[];
     ips: { ip: string; protocol: string; last_seen: number }[];
     usage: UsagePoint[];
+    connectionLog: boolean;
+    connections: Connection[];
 }
 
 export interface Settings {
@@ -95,6 +105,7 @@ export interface Settings {
         showDisabledNotice: boolean;
     };
     limits: { enforceIpLimit: boolean; ipWindowSec: number; blockMinutes: number };
+    logging: { connectionLog: boolean; retentionDays: number };
     protocols: {
         'vless-reality': { enabled: boolean; port: number; target: string; serverNames: string[]; privateKey: string; publicKey: string; shortIds: string[]; fingerprint: string };
         'vless-xhttp': { enabled: boolean; path: string; internalPort: number; mode: string };

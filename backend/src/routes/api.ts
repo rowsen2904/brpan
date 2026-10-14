@@ -10,6 +10,7 @@ import { userDto } from '../services/dto.js';
 import { openvpn } from '../services/openvpn.js';
 import { getSettings, publicBaseUrl, updateSettings } from '../services/settings.js';
 import { protocolTotals, topUsers, trafficSince, usageSeries, userCounters } from '../services/stats.js';
+import { clearAllConnections, clearUserConnections, userConnections } from '../services/conntrack.js';
 import { userSubscriptionInfo } from '../services/subscription.js';
 import { systemInfo } from '../services/system.js';
 import {
@@ -78,6 +79,12 @@ const settingsPatch = z
                 enforceIpLimit: z.boolean(),
                 ipWindowSec: z.number().int().min(10).max(3600),
                 blockMinutes: z.number().int().min(1).max(1440),
+            })
+            .partial(),
+        logging: z
+            .object({
+                connectionLog: z.boolean(),
+                retentionDays: z.number().int().min(1).max(365),
             })
             .partial(),
         protocols: z
@@ -257,6 +264,8 @@ export async function apiRoutes(app: FastifyInstance) {
                 devices: listDevices(id),
                 ips: userIps(id),
                 usage: usageSeries(30, id),
+                connectionLog: getSettings().logging.connectionLog,
+                connections: getSettings().logging.connectionLog ? userConnections(id) : [],
             };
         });
 
@@ -303,6 +312,17 @@ export async function apiRoutes(app: FastifyInstance) {
         r.delete('/api/users/:id/devices/:deviceId', async (req) => {
             const { id, deviceId } = z.object({ id: z.coerce.number().int(), deviceId: z.coerce.number().int() }).parse(req.params);
             deleteDevice(id, deviceId);
+            return { ok: true };
+        });
+
+        r.delete('/api/users/:id/connections', async (req) => {
+            const { id } = idParam.parse(req.params);
+            clearUserConnections(id);
+            return { ok: true };
+        });
+
+        r.delete('/api/system/connections', async () => {
+            clearAllConnections();
             return { ok: true };
         });
 

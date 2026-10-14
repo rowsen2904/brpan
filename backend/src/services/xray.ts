@@ -8,6 +8,7 @@ import { XtlsApi } from '@remnawave/xtls-sdk';
 
 import { config } from '../config.js';
 import { XRAY_PROTOCOLS, type Protocol, type UserRow } from '../types.js';
+import { ingest as conntrackIngest } from './conntrack.js';
 import { getSettings } from './settings.js';
 import { allUsers, hasProtocol, isActive } from './users.js';
 import { buildXrayConfig, type TlsFiles } from './xray-config.js';
@@ -119,7 +120,7 @@ class XrayService {
         const proc = spawn(config.xrayBin, ['run', '-c', this.configPath], { env, stdio: ['ignore', 'pipe', 'pipe'] });
         this.proc = proc;
         this.startedAt = Date.now();
-        proc.stdout?.on('data', (d) => this.logs.push(String(d)));
+        proc.stdout?.on('data', (d) => this.onLog(String(d)));
         proc.stderr?.on('data', (d) => this.logs.push(String(d)));
         proc.on('error', (err) => {
             this.logs.push(`[panel] xray spawn error: ${err.message}`);
@@ -132,6 +133,11 @@ class XrayService {
             }
             if (!this.stopping) this.scheduleRestart(3000);
         });
+    }
+
+    private onLog(chunk: string) {
+        this.logs.push(chunk);
+        conntrackIngest(chunk);
     }
 
     async stop() {

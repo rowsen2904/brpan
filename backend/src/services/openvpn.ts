@@ -1,4 +1,5 @@
 import { type ChildProcess, execFile, spawn } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
@@ -78,7 +79,7 @@ class OpenVpnService {
             await this.openssl(['x509', '-req', '-in', 'server.csr', '-CA', 'ca.crt', '-CAkey', 'ca.key', '-set_serial', `0x${randomHex(8)}`, '-out', 'server.crt', '-days', '3650', '-extfile', 'server.ext']);
         }
         if (!fs.existsSync(f('tc.key'))) {
-            await execFileAsync(config.openvpnBin, ['--genkey', 'secret', f('tc.key')]);
+            fs.writeFileSync(f('tc.key'), openvpnStaticKey(), { mode: 0o600 });
         }
         fs.writeFileSync(f('client.ext'), 'basicConstraints=CA:FALSE\nkeyUsage=digitalSignature\nextendedKeyUsage=clientAuth\n');
     }
@@ -336,6 +337,12 @@ class OpenVpnService {
         }
         return true;
     }
+}
+
+function openvpnStaticKey(): string {
+    const hex = crypto.randomBytes(256).toString('hex');
+    const body = hex.match(/.{1,32}/g)!.join('\n');
+    return `#\n# 2048 bit OpenVPN static key\n#\n-----BEGIN OpenVPN Static key V1-----\n${body}\n-----END OpenVPN Static key V1-----\n`;
 }
 
 export const openvpn = new OpenVpnService();

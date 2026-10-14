@@ -143,5 +143,9 @@ export interface Settings {
         ipWindowSec: number;
         blockMinutes: number;
     };
+    logging: {
+        connectionLog: boolean;
+        retentionDays: number;
+    };
     protocols: ProtocolSettings;
 }

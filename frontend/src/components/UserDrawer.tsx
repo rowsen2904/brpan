@@ -1,7 +1,7 @@
 import { AreaChart } from '@mantine/charts';
 import { ActionIcon, Anchor, Badge, Button, Drawer, Group, Paper, SimpleGrid, Stack, Table, Tabs, Text, Tooltip } from '@mantine/core';
 import { modals } from '@mantine/modals';
-import { IconDeviceMobile, IconDownload, IconEdit, IconKey, IconLink, IconRefresh, IconTrash, IconWorld } from '@tabler/icons-react';
+import { IconDeviceMobile, IconDownload, IconEdit, IconHistory, IconKey, IconLink, IconRefresh, IconTrash, IconWorld } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
@@ -106,6 +106,9 @@ export function UserDrawer({ userId, onClose, onEdit }: { userId: number | null;
                             </Tabs.Tab>
                             <Tabs.Tab value="ips" leftSection={<IconWorld size={14} />}>
                                 IPs
+                            </Tabs.Tab>
+                            <Tabs.Tab value="sites" leftSection={<IconHistory size={14} />}>
+                                Sites{data.connectionLog ? ` (${data.connections.length})` : ''}
                             </Tabs.Tab>
                         </Tabs.List>
 
@@ -299,6 +302,65 @@ export function UserDrawer({ userId, onClose, onEdit }: { userId: number | null;
                                 <Text size="sm" c="dimmed" ta="center" mt="md">
                                     No connections recorded
                                 </Text>
+                            )}
+                        </Tabs.Panel>
+
+                        <Tabs.Panel value="sites" pt="md">
+                            {!data.connectionLog ? (
+                                <Text size="sm" c="dimmed" ta="center" mt="md">
+                                    Connection logging is off. Enable it in Settings → Connection logging to record visited domains.
+                                </Text>
+                            ) : (
+                                <Stack>
+                                    <Group justify="space-between">
+                                        <Text size="xs" c="dimmed">
+                                            Destination domains (SNI) of this user's Xray connections. WireGuard / AmneziaWG / OpenVPN are not shown.
+                                        </Text>
+                                        {data.connections.length > 0 && (
+                                            <Button
+                                                size="xs"
+                                                variant="light"
+                                                color="red"
+                                                onClick={async () => {
+                                                    await api(`/api/users/${userId}/connections`, { method: 'DELETE' });
+                                                    notifyOk('Cleared');
+                                                    refresh();
+                                                }}
+                                            >
+                                                Clear
+                                            </Button>
+                                        )}
+                                    </Group>
+                                    <Table striped>
+                                        <Table.Thead>
+                                            <Table.Tr>
+                                                <Table.Th>Domain</Table.Th>
+                                                <Table.Th>Protocol</Table.Th>
+                                                <Table.Th ta="right">Hits</Table.Th>
+                                                <Table.Th>Last seen</Table.Th>
+                                            </Table.Tr>
+                                        </Table.Thead>
+                                        <Table.Tbody>
+                                            {data.connections.map((c) => (
+                                                <Table.Tr key={c.host}>
+                                                    <Table.Td className="mono">{c.host}</Table.Td>
+                                                    <Table.Td>
+                                                        <Text size="xs" c="dimmed">
+                                                            {c.protocol}
+                                                        </Text>
+                                                    </Table.Td>
+                                                    <Table.Td ta="right">{c.hits}</Table.Td>
+                                                    <Table.Td>{fromNow(c.last_seen)}</Table.Td>
+                                                </Table.Tr>
+                                            ))}
+                                        </Table.Tbody>
+                                    </Table>
+                                    {!data.connections.length && (
+                                        <Text size="sm" c="dimmed" ta="center" mt="md">
+                                            No domains recorded yet
+                                        </Text>
+                                    )}
+                                </Stack>
                             )}
                         </Tabs.Panel>
                     </Tabs>

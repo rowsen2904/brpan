@@ -32,10 +32,19 @@ modprobe tun 2>/dev/null || true
 if [ ! -f .env ]; then
     read -rp "Domain pointed to this server (empty = IP only): " DOMAIN
     PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20)"
+    echo
+    echo "Connection logging records the destination domain (SNI) of each user's"
+    echo "connection in the database, so you can see what sites a user accesses."
+    echo "This is privacy-invasive; leave it off unless you need it and it is lawful"
+    echo "and disclosed to your users. You can also toggle it later in the panel."
+    read -rp "Enable connection (domain) logging? [y/N]: " LOGANS
+    case "${LOGANS}" in [yY]*) CONNECTION_LOG=true ;; *) CONNECTION_LOG=false ;; esac
     cp .env.example .env
     sed -i "s|^DOMAIN=.*|DOMAIN=${DOMAIN}|" .env
     sed -i "s|^ADMIN_PASSWORD=.*|ADMIN_PASSWORD=${PASSWORD}|" .env
+    sed -i "s|^CONNECTION_LOG=.*|CONNECTION_LOG=${CONNECTION_LOG}|" .env
     echo "Generated admin password: ${PASSWORD}"
+    echo "Connection logging: ${CONNECTION_LOG}"
 fi
 
 if [ "${BRPAN_SKIP_FIREWALL:-0}" != "1" ] && command -v ufw >/dev/null 2>&1; then

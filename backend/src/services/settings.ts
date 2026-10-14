@@ -35,6 +35,10 @@ function defaults(): Settings {
             ipWindowSec: 60,
             blockMinutes: 5,
         },
+        logging: {
+            connectionLog: config.connectionLogDefault,
+            retentionDays: 7,
+        },
         protocols: {
             'vless-reality': {
                 enabled: true,
