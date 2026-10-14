@@ -89,7 +89,7 @@ if [ ! -f .env ]; then
     read -rp "Enable domain logging now? [y/N]: " LOGANS
     case "${LOGANS}" in [yY]*) CONNECTION_LOG=true ;; *) CONNECTION_LOG=false ;; esac
 
-    PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 20)"
+    PASSWORD="$(openssl rand -base64 18 | tr -dc 'A-Za-z0-9')"
     cp .env.example .env
     sed -i "s|^DOMAIN=.*|DOMAIN=${DOMAIN}|" .env
     [ -z "${DOMAIN}" ] && [ -n "${PUBLIC_IP}" ] && sed -i "s|^#\?SERVER_ADDRESS=.*|SERVER_ADDRESS=${PUBLIC_IP}|" .env
