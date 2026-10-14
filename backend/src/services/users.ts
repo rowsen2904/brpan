@@ -125,7 +125,7 @@ export function createUser(input: UserInput): UserRow {
             c.wg_private_key,
             c.wg_public_key,
             nextWgIndex(),
-            JSON.stringify(input.protocols ?? PROTOCOLS.filter((p) => p !== 'openvpn')),
+            JSON.stringify(input.protocols ?? [...PROTOCOLS]),
             input.trafficLimit ?? 0,
             input.resetStrategy ?? 'NO_RESET',
             now,

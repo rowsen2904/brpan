@@ -87,7 +87,7 @@ export function shareLink(protocol: Protocol, user: UserRow, s: Settings, tls: T
         }
         case 'shadowsocks': {
             const ss = p.shadowsocks;
-            const userinfo = Buffer.from(`${ss.method}:${user.ss_password}`).toString('base64url');
+            const userinfo = Buffer.from(`${ss.method}:${user.ss_password}`).toString('base64');
             const prefix = ss.prefix ? `/?outline=1&prefix=${encodeURIComponent(ss.prefix)}` : '';
             return `ss://${userinfo}@${addr}:${ss.port}${prefix}#${name}`;
         }

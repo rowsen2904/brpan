@@ -10,6 +10,7 @@ export const config = {
     dataDir,
     dbPath: path.join(dataDir, 'brpan.db'),
     domain: env.DOMAIN ?? '',
+    serverAddress: env.SERVER_ADDRESS ?? '',
     adminUsername: env.ADMIN_USERNAME ?? 'admin',
     adminPassword: env.ADMIN_PASSWORD ?? '',
     xrayBin: env.XRAY_BIN ?? 'xray',
@@ -28,5 +29,6 @@ export const config = {
     staticDir: env.STATIC_DIR ?? path.resolve('../frontend/dist'),
     statsIntervalSec: Number(env.STATS_INTERVAL ?? 15),
     connectionLogDefault: (env.CONNECTION_LOG ?? 'false') === 'true',
+    openvpnDefault: (env.OPENVPN_ENABLED ?? 'false') === 'true',
     disableCores: env.DISABLE_CORES === 'true',
 };

@@ -109,7 +109,7 @@ async function boot() {
         }
     }, 60_000);
     setInterval(sampleSystem, 5_000);
-    setInterval(() => xray.checkCertChanged(), 10 * 60_000);
+    setInterval(() => xray.checkCertChanged(), 30_000);
     setInterval(() => {
         if (!caddyStatus().applied) void applyCaddy();
     }, 30_000);

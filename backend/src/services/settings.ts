@@ -19,7 +19,7 @@ function defaults(): Settings {
     const [h1, h2, h3, h4] = [...headers];
     return {
         domain,
-        serverAddress: domain,
+        serverAddress: config.serverAddress || domain,
         remarkPrefix: 'BRPAN',
         subscription: {
             profileTitle: 'BRPAN VPN',
@@ -100,7 +100,7 @@ function defaults(): Settings {
                 h4,
             },
             openvpn: {
-                enabled: false,
+                enabled: config.openvpnDefault,
                 port: 1194,
                 proto: 'udp',
                 subnet: '10.67.0.0/16',
@@ -135,6 +135,7 @@ export function getSettings(): Settings {
         cache.domain = config.domain;
         cache.serverAddress ||= config.domain;
     }
+    if (!cache.serverAddress && config.serverAddress) cache.serverAddress = config.serverAddress;
     persist(cache);
     return cache;
 }

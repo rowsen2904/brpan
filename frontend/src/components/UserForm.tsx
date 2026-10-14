@@ -22,7 +22,7 @@ interface Values {
     email: string;
 }
 
-const DEFAULT_PROTOCOLS = PROTOCOLS.filter((p) => p !== 'openvpn');
+const DEFAULT_PROTOCOLS = [...PROTOCOLS];
 
 function toValues(user?: User | null): Values {
     return {

@@ -15,6 +15,7 @@
   - OpenVPN — OpenVPN Connect (сертификат на пользователя)
 - **Одна ссылка подписки** на пользователя, формат выбирается по User-Agent:
   base64 (Happ, v2RayTun, v2rayNG, Streisand, Shadowrocket, Hiddify), Clash/Mihomo YAML, sing-box JSON, страница подписки для браузера.
+  Каждому клиенту отдаются только поддерживаемые им протоколы (например, Happ получает VLESS/Trojan/Shadowsocks/Hysteria2, но не `wireguard://` — его Happ не умеет; WireGuard/AmneziaWG берутся как `.conf`).
 - **Happ**: `happ://add/...` и зашифрованные `happ://crypt2|crypt3|crypt4/...`, заголовки `profile-title`, `subscription-userinfo`, `announce`, `support-url`.
 - **Лимиты**: трафик (с ежедневным/еженедельным/ежемесячным сбросом), срок действия, лимит устройств:
   - HWID (`x-hwid` от Happ/v2RayTun/INCY) при получении подписки, как в Remnawave;

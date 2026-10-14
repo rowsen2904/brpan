@@ -13,6 +13,9 @@ export type SubFormat = 'base64' | 'plain' | 'clash' | 'singbox' | 'html';
 
 const HWID_RE = /^[a-zA-Z0-9=-]{10,64}$/;
 
+// Happ supports VLESS, VMess, Trojan, Shadowsocks, Socks, Hysteria2 only.
+const NO_WIREGUARD_CLIENTS = /^Happ\//i;
+
 export interface SubRequest {
     userAgent: string;
     accept: string;
@@ -172,7 +175,8 @@ export function buildSubscription(user: UserRow, format: Exclude<SubFormat, 'htm
 
     const tls = tlsInfo();
     const protocols: Protocol[] = notice ? [] : availableProtocols(user, s, hy2Available()).filter((p) => p !== 'openvpn');
-    const uriProtocols = protocols.filter((p) => p !== 'amneziawg');
+    const noWireguard = NO_WIREGUARD_CLIENTS.test(req.userAgent);
+    const uriProtocols = protocols.filter((p) => p !== 'amneziawg' && !(noWireguard && p === 'wireguard'));
 
     if (notice && !s.subscription.showDisabledNotice) {
         return { status: 200, headers: { ...headers, 'content-type': 'text/plain; charset=utf-8' }, body: '' };
