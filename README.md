@@ -37,9 +37,11 @@
 ## Быстрый старт
 
 ```bash
-git clone <repo> /opt/brpan && cd /opt/brpan
+git clone https://github.com/rowsen2904/brpan /opt/brpan && cd /opt/brpan
 sudo ./install.sh
 ```
+
+Обновление позже — `sudo ./update.sh` (тянет последний код с GitHub и пересобирает, сохраняя `.env` и базу).
 
 Подробно — [docs/DEPLOY.md](docs/DEPLOY.md). API для ботов/биллинга — [docs/API.md](docs/API.md).
 
