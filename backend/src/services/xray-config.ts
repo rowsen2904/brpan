@@ -36,7 +36,8 @@ function clientsFor(protocol: Protocol, users: UserRow[], s: Settings) {
 
 const sniffing = { enabled: true, destOverride: ['http', 'tls', 'quic'], routeOnly: true };
 
-const tcpSockopt = { tcpFastOpen: true };
+// TCP Fast Open is left off: on egress it breaks connections to some CDNs/sites.
+const tcpSockopt: Record<string, unknown> = {};
 
 let ipv6Cache: boolean | null = null;
 
@@ -179,7 +180,6 @@ export function buildXrayConfig(s: Settings, users: UserRow[], tls: TlsFiles | n
                 tag: 'direct',
                 protocol: 'freedom',
                 settings: { domainStrategy: hasIpv6() ? 'UseIPv4v6' : 'UseIPv4' },
-                streamSettings: { sockopt: tcpSockopt },
             },
             { tag: 'block', protocol: 'blackhole' },
         ],
