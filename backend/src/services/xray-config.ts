@@ -93,6 +93,9 @@ export function buildXrayConfig(s: Settings, users: UserRow[], tls: TlsFiles | n
                     serverNames: r.serverNames,
                     privateKey: r.privateKey,
                     shortIds: r.shortIds,
+                    // Xray 26 refuses REALITY clients older than 26.3.27 by default, which locks out
+                    // apps that bundle an older core. 1.8.0 is where REALITY appeared: accept them all.
+                    minClientVer: '1.8.0',
                 },
                 sockopt: tcpSockopt,
             },

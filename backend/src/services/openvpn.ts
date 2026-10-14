@@ -164,7 +164,10 @@ class OpenVpnService {
             'persist-key',
             'persist-tun',
             'duplicate-cn',
-            'push "redirect-gateway def1 bypass-dhcp"',
+            // IPv4-only tunnel: pull IPv6 into it and reject it there, so dual-stack clients
+            // fall back to IPv4 through the VPN instead of leaking IPv6 around it.
+            'push "redirect-gateway def1 ipv6 bypass-dhcp"',
+            'push "block-ipv6"',
             ...o.dns.split(',').map((d) => `push "dhcp-option DNS ${d.trim()}"`),
             `management 127.0.0.1 ${MGMT_PORT}`,
             'script-security 2',
